@@ -5,10 +5,10 @@ import html, json, os
 import numpy as np
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 
-COLS, RAMP, GAMMA = 60, " .:-=+*#%@", 0.9
-FS, CELL_W, LINE_H = 13.3, 8.0, 15.0       # portrait font metrics (bigger glyphs survive GitHub scaling)
+COLS, RAMP, GAMMA = 66, " .:-=+*#%@", 1.0
+FS, CELL_W, LINE_H = 10, 6.0, 12.0          # portrait font metrics
 PX, TOP = 18, 52
-PANEL_X, W = 520, 860                       # 860px fits GitHub's README column without downscaling
+PANEL_X, W = 440, 985
 MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace'
 THEMES = {
     "dark":  dict(bg="#0d1117", border="#30363d", fg="#c9d1d9", key="#ffa657", val="#a5d6ff",
@@ -20,7 +20,7 @@ esc = lambda s: html.escape(str(s), quote=False)
 hexc = lambda p: "#%02x%02x%02x" % tuple(int(v) for v in p)
 
 def portrait_rows(path, light):
-    im = Image.open(path).convert("RGB").crop((130, 30, 600, 640))   # head + shoulders, drops watermark
+    im = Image.open(path).convert("RGB").crop((95, 25, 655, 700))   # head + shoulders, drops watermark
     w, h = im.size
     rows = round(COLS * (h / w) * (CELL_W / LINE_H))
     small = im.resize((COLS, rows), Image.LANCZOS)
@@ -40,7 +40,7 @@ def portrait_rows(path, light):
     m = rgb.max(axis=2, keepdims=True)
     rgb = rgb * np.clip(215.0 / (m + 1), 1, 5)           # lift value so chars read on a dark panel
     rgb = np.clip(rgb * (0.62 if light else 1.0), 0, 255).astype(np.uint8)
-    rgb = (rgb // 8) * 8 + 4                # quantise -> longer same-colour runs, smaller file
+    rgb = (rgb // 16) * 16 + 8                # quantise -> longer same-colour runs, smaller file
     out = []
     for r in range(rows):
         runs, cur, col = [], "", None
@@ -62,11 +62,11 @@ def portrait_rows(path, light):
 def render(theme_name, prof, stats):
     t, light = THEMES[theme_name], theme_name == "light"
     rows = portrait_rows("assets/portrait.png", light)
-    H = max(int(len(rows) * LINE_H + TOP + 30), 500)
+    H = max(int(len(rows) * LINE_H + TOP + 30), 520)
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
          f'role="img" aria-label="Terminal-style profile card for {esc(prof["host"])}">',
-         f'<style>text{{font-family:{MONO};white-space:pre}}.p{{font-size:{FS}px;font-weight:700}}'
-         f'.i{{font-size:12.5px}}.k{{fill:{t["key"]}}}.v{{fill:{t["val"]}}}.d{{fill:{t["dim"]}}}'
+         f'<style>text{{font-family:{MONO};white-space:pre}}.p{{font-size:{FS}px}}'
+         f'.i{{font-size:14px}}.k{{fill:{t["key"]}}}.v{{fill:{t["val"]}}}.d{{fill:{t["dim"]}}}'
          f'.a{{fill:{t["accent"]}}}.f{{fill:{t["fg"]}}}'
          f'@keyframes b{{50%{{opacity:0}}}}.cur{{animation:b 1.1s steps(1) infinite}}</style>',
          f'<rect width="{W}" height="{H}" rx="10" fill="{t["bg"]}" stroke="{t["border"]}"/>',
@@ -79,30 +79,26 @@ def render(theme_name, prof, stats):
         if not runs: continue
         spans = "".join(
             (f'<tspan fill="{k}">{s}</tspan>' if k else f'<tspan>{s}</tspan>') for k, s in runs)
-        n = sum(len(t) for _, t in runs)
-        o.append(f'<text class="p" x="{PX}" y="{TOP + r*LINE_H:g}" textLength="{n*CELL_W:g}" '
-                 f'lengthAdjust="spacing" xml:space="preserve">{spans}</text>')
+        o.append(f'<text class="p" x="{PX}" y="{TOP + r*LINE_H:g}" xml:space="preserve">{spans}</text>')
     # info panel
-    n_lines = 1 + len(prof['info']) + 1 + 3 + 1 + len(prof['projects']) + 1 + 4 + 1
-    panel_h = n_lines * 20 + 4 * 6
-    y, step = TOP + 6 + max(0, (len(rows) * LINE_H - panel_h) // 2), 20
+    y, step = TOP + 6, 22
     def line(content): 
         nonlocal y
         o.append(f'<text class="i" x="{PANEL_X}" y="{y}" xml:space="preserve">{content}</text>'); y += step
-    def kv(k, v, w=12):
+    def kv(k, v, w=14):
         line(f'<tspan class="k">{esc(k)}</tspan><tspan class="d">{"." * max(2, w - len(k))}</tspan> <tspan class="v">{esc(v)}</tspan>')
     def head(title):
         nonlocal y
         y += 6
-        line(f'<tspan class="f">{esc(title)}</tspan> <tspan class="d">{"-" * max(2, 40 - len(title))}</tspan>')
-    line(f'<tspan class="a">{esc(prof["host"])}</tspan> <tspan class="d">{"-" * 22}</tspan>')
+        line(f'<tspan class="f">{esc(title)}</tspan> <tspan class="d">{"-" * max(2, 44 - len(title))}</tspan>')
+    line(f'<tspan class="a">{esc(prof["host"])}</tspan> <tspan class="d">{"-" * 34}</tspan>')
     for k, v in prof["info"]: kv(k, v)
     head("Stack")
     kv("Languages", ", ".join(prof["languages"]))
     kv("Tools", ", ".join(prof["tools"][:3]))
     kv("Also", ", ".join(prof["tools"][3:]))
     head("Featured")
-    for n, d in prof["projects"]: kv(n, d, w=15)
+    for n, d in prof["projects"]: kv(n, d, w=16)
     head("GitHub Stats")
     s = stats
     kv("Repos", f'{s.get("repos","?")} {{Stars: {s.get("stars","?")}}}')
