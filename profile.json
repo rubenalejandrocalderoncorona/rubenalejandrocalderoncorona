@@ -1,0 +1,19 @@
+{
+  "user": "rubenalejandrocalderoncorona",
+  "host": "ruben@calderon",
+  "info": [
+    ["OS", "Mexico City, MX"],
+    ["Role", "Applied AI Engineer"],
+    ["Company", "Oracle"],
+    ["Experience", "6+ yrs"],
+    ["Cloud", "GCP, Azure, OCI"],
+    ["Host", "agentic AI & self-healing ops"]
+  ],
+  "languages": ["Python", "Go", "JavaScript", "Bash"],
+  "tools": ["Terraform", "Ansible", "Docker", "GitHub Actions", "SQLite"],
+  "projects": [
+    ["raibis-lifeos", "Python/Go LifeOS TUI"],
+    ["ruben_rag", "personal knowledge RAG"],
+    ["studytrack", "study plan tracker"]
+  ]
+}
